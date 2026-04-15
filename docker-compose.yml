@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  payments-db:
+    image: postgres:15
+    container_name: payments-db
+    environment:
+      POSTGRES_DB: payments_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - payments_db_data:/var/lib/postgresql/data
+    networks:
+      - payments-network
+
+volumes:
+  payments_db_data:
+
+networks:
+  payments-network:
+    driver: bridge
