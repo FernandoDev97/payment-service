@@ -24,6 +24,25 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
     await this.disconnect();
   }
 
+  async waitForConnection(maxAttempts = 10, delayMs = 500): Promise<boolean> {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (this.connection) {
+        this.logger.log('✅ Conexão com RabbitMQ estabelecida');
+        return true;
+      }
+
+      this.logger.log(
+        `Tentativa ${attempt}/${maxAttempts}: Aguardando conexão com RabbitMQ...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    this.logger.error(
+      '❌ Falha ao conectar ao RabbitMQ após várias tentativas',
+    );
+    return false;
+  }
+
   private async connect() {
     try {
       const rabbitmqUrl = this.configService.get<string>('RABBITMQ_URL');

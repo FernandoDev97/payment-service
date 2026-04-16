@@ -7,7 +7,11 @@ import { databaseConfig } from './config/database.config';
 import { EventsModule } from './events/events.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), TypeOrmModule.forRoot(databaseConfig), EventsModule],
+  imports: [
+    ConfigModule.forRoot(),
+    TypeOrmModule.forRoot(databaseConfig),
+    EventsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
