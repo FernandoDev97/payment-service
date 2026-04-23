@@ -11,8 +11,8 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RabbitmqService.name);
-  private connection: amqp.ChannelModel;
-  private channel: amqp.Channel;
+  private connection!: amqp.ChannelModel;
+  private channel!: amqp.Channel;
 
   constructor(private configService: ConfigService) {}
 
@@ -75,7 +75,7 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.warn(
         '⚠️ Falha ao se conectar ao RabbitMQ, continuando sem fila de mensagens:',
-        error.message || error,
+        error instanceof Error ? error.message : String(error),
       );
     }
   }
@@ -159,11 +159,30 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
       }
 
       await this.channel.assertExchange(exchange, 'topic', { durable: true });
+
+      const dlxExchange = `${exchange}.dlx`;
+      await this.channel.assertExchange(dlxExchange, 'topic', {
+        durable: true,
+      });
+
+      const dlqName = `${queueName}.dlq`;
+      await this.channel.assertQueue(dlqName, {
+        durable: true,
+        arguments: {
+          'x-message-ttl': 60 * 60 * 24 * 7, // 7 dias em milissegundos
+        },
+      });
+
+      const routingKeyDLQ = `${routingKey}.dead`;
+      await this.channel.bindQueue(dlqName, dlxExchange, routingKeyDLQ);
+
       const queue = await this.channel.assertQueue(queueName, {
         durable: true,
         arguments: {
-          'x-message-ttl': 60 * 60 * 24,
+          'x-message-ttl': 60 * 60 * 24, // 1 dia em milissegundos
           'x-max-length': 10000,
+          'x-dead-letter-exchange': dlxExchange,
+          'x-dead-letter-routing-key': routingKeyDLQ,
         },
       });
       await this.channel.bindQueue(queue.queue, exchange, routingKey);
@@ -189,6 +208,11 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
               error,
             );
             this.channel.nack(msg, false, false);
+            this.logger.warn(
+              `Mensagem rejeitada da fila ${queueName}: ${JSON.stringify(
+                msg.content.toString(),
+              )}`,
+            );
           }
         }
       });
