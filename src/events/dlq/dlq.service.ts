@@ -117,7 +117,7 @@ export class DlqService {
         channel.nack(msg, false, true);
       } catch (error) {
         channel.nack(msg, false, true);
-        this.logger.error('Failed to parse DLQ message:', error);
+        this.logger.error('Falha ao interpretar a mensagem da DLQ:', error);
       }
     }
     return messages;
@@ -159,7 +159,7 @@ export class DlqService {
           channel.ack(msg);
           found = true;
 
-          this.logger.log(`✅ Message ${orderId} reprocessed successfully`);
+          this.logger.log(`✅ Mensagem ${orderId} reprocessada com sucesso`);
           break;
         } else {
           // Não é a mensagem que procuramos, devolve para DLQ
@@ -167,7 +167,7 @@ export class DlqService {
         }
       } catch (error) {
         channel.nack(msg, false, true);
-        this.logger.error('Failed to process DLQ message:', error);
+        this.logger.error('Falha ao processar a mensagem da DLQ:', error);
       }
     }
     return found;
@@ -186,7 +186,7 @@ export class DlqService {
     let processed = 0;
     let failed = 0;
 
-    this.logger.log(`🔄 Reprocessing ${stats.messageCount} messages from DLQ`);
+    this.logger.log(`🔄 Reprocessando ${stats.messageCount} mensagens da DLQ`);
 
     for (let i = 0; i < stats.messageCount; i++) {
       const msg = await channel.get(this.DLQ_NAME, { noAck: false });
@@ -208,17 +208,17 @@ export class DlqService {
         channel.ack(msg);
         processed++;
 
-        this.logger.log(`✅ Reprocessed order ${content.orderId}`);
+        this.logger.log(`✅ Pedido ${content.orderId} reprocessado`);
       } catch (error) {
         // Falhou, mantém na DLQ
         channel.nack(msg, false, true);
         failed++;
-        this.logger.error('Failed to reprocess message:', error);
+        this.logger.error('Falha ao reprocessar a mensagem:', error);
       }
     }
 
     this.logger.log(
-      `🏁 Reprocess complete: ${processed} processed, ${failed} failed`,
+      `🏁 Reprocessamento concluído: ${processed} processadas, ${failed} falharam`,
     );
 
     return { processed, failed };
@@ -250,7 +250,7 @@ export class DlqService {
           // Encontrou! Remove permanentemente (ack sem reprocessar)
           channel.ack(msg);
           found = true;
-          this.logger.warn(`🗑️ Message ${orderId} discarded from DLQ`);
+          this.logger.warn(`🗑️ Mensagem ${orderId} descartada da DLQ`);
           break;
         } else {
           // Não é a mensagem, devolve
@@ -275,7 +275,7 @@ export class DlqService {
 
     const result = await channel.purgeQueue(this.DLQ_NAME);
 
-    this.logger.warn(`🗑️ Purged ${result.messageCount} messages from DLQ`);
+    this.logger.warn(`🗑️ ${result.messageCount} mensagens removidas da DLQ`);
 
     return result.messageCount;
   }
