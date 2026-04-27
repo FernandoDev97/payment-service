@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PaymentQueueService } from '../payment-queue/payment-queue.service';
 import { PaymentOrderMessage } from '../payment-queue.interface';
 import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
+import { ConsumerMetrics, MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class PaymentConsumerService implements OnModuleInit {
@@ -10,10 +11,12 @@ export class PaymentConsumerService implements OnModuleInit {
   constructor(
     private readonly paymentQueueService: PaymentQueueService,
     private readonly rabbitMQService: RabbitmqService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async onModuleInit() {
     this.logger.log('Iniciando serviço de consumo de ordens de pagamento');
+    this.metricsService.markConsumerStarted();
     await this.startConsuming();
   }
 
@@ -47,6 +50,7 @@ export class PaymentConsumerService implements OnModuleInit {
   }
 
   private processPaymentOrder(message: PaymentOrderMessage): void {
+    const startTime = Date.now();
     try {
       // Log inicial com informações da mensagem
       this.logger.log(
@@ -66,7 +70,9 @@ export class PaymentConsumerService implements OnModuleInit {
       // TODO: Processar pagamento usando PaymentsService
       // Isso será implementado na próxima aula
       this.logger.log('✅ Pagamento recebido e validado');
+      this.metricsService.updateMetrics(true, startTime);
     } catch (error) {
+      this.metricsService.updateMetrics(false, startTime);
       // Log de erro com contexto completo
       this.logger.error(
         `❌ Falha ao processar pagamento para o pedido ${message.orderId}:`,
@@ -108,5 +114,17 @@ export class PaymentConsumerService implements OnModuleInit {
 
     // Todas validações passaram
     return true;
+  }
+
+  incrementRetryCount(): void {
+    this.metricsService.incrementRetryCount();
+  }
+
+  getMetrics(): ConsumerMetrics {
+    return this.metricsService.getMetrics();
+  }
+
+  resetMetrics(): void {
+    this.metricsService.resetMetrics();
   }
 }

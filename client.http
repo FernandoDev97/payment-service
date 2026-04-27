@@ -1,0 +1,17 @@
+@baseUrl = http://localhost:3004
+
+### 
+GET {{baseUrl}}/metrics
+Content-Type: application/json
+
+###
+GET {{baseUrl}}/metrics/health
+Content-Type: application/json
+
+###
+GET {{baseUrl}}/metrics/summary
+Content-Type: application/json
+
+###
+POST {{baseUrl}}/metrics/reset
+Content-Type: application/json
